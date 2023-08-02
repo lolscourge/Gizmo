@@ -9,7 +9,8 @@ from pydub.playback import play
 import struct
 import pvporcupine
 import pyaudio
-import mlcd, pygame
+import display
+import pygame
 import threading
 import string
 import sounddevice as sd
@@ -50,9 +51,8 @@ class Gizmo:
     def create_porcupine(self):
         return pvporcupine.create(access_key="w6OczmoMGYbWhLYZHgBzctULcMgQcZkq67x1dWQ+EOMS9AvYImML2Q==",keyword_paths=['/home/harry/Gizmo/HeyGizmo.ppn'])
 
-    def lcdeyes(self):
-        mlcd.init(8,1)
-        pygame.init()
+    def update_display(self):
+        display.init()
         running = True
         clock = pygame.time.Clock()
         start_time = pygame.time.get_ticks()
@@ -63,7 +63,7 @@ class Gizmo:
         while running:
             if self.blink_event.is_set():
                 if self.blink_flag[0] is not None:
-                    mlcd.draw([self.blink_flag[0][0]], str(self.last_terminal_message))
+                    display.draw([self.blink_flag[0][0]], str(self.last_terminal_message))
                     start_time = pygame.time.get_ticks()
                     interval = self.blink_flag[0][1] * 1000
                     self.blink_flag[0] = None
@@ -71,7 +71,7 @@ class Gizmo:
 
             elif pygame.time.get_ticks() - start_time >= interval:
                 state = "|-    -|" if state == "|0    0|" else "|0    0|"
-                mlcd.draw([state], str(self.last_terminal_message))
+                display.draw([state], str(self.last_terminal_message))
                 start_time = pygame.time.get_ticks()
                 interval = 500 if state == "|-    -|" else 3000
 
@@ -207,7 +207,7 @@ class Gizmo:
                 answer = self.get_response(self.INSTRUCTIONS, previous_questions_and_answers, question)
                 current_time_placeholder = "[current time]"
                 current_time = datetime.datetime.now().strftime("%H:%M")
-                answer = answer.replace(current_time_placeholder, current_time)  # Fix: Reassign the result to 'answer'
+                answer = answer.replace(current_time_placeholder, current_time)
                 self.last_terminal_message = "Gizmo: " + answer
                 print("Gizmo: ", answer)
                 self.speak(answer)

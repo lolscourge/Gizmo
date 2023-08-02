@@ -1,7 +1,7 @@
 import pygame
 import textwrap
 
-def init(chars=None, lines=None):
+def init():
     global screen
     global myfont
     global terminalfont
@@ -11,14 +11,14 @@ def init(chars=None, lines=None):
     screen_height = info_object.current_h
     screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
     pygame.display.set_caption("I am Gizmo!")
-    myfont = pygame.font.SysFont("monospace", min(screen_width, screen_height) // 8)  # adjust font size relative to screen size
-    terminalfont = pygame.font.SysFont("monospace", min(screen_width, screen_height) // 16)  # smaller font for terminal line
+    myfont = pygame.font.SysFont("monospace", min(screen_width, screen_height) // 4)  
+    terminalfont = pygame.font.SysFont("monospace", min(screen_width, screen_height) // 16)  
 
 def draw(args, terminal_line):
     global screen
     global myfont
     global terminalfont
-    screen.fill((0,0,0))  # erase screen contents
+    screen.fill((0,0,0))
 
     y_offset = screen.get_height() // 2 - len(args) * myfont.get_height() // 2
 
@@ -27,7 +27,6 @@ def draw(args, terminal_line):
         line_rect = line.get_rect(center=(screen.get_width() // 2, y_offset + i * myfont.get_height()))
         screen.blit(line, line_rect)
 
-    # Create a word wrapper object
     wrapper = textwrap.TextWrapper(width=int(screen.get_width()/terminalfont.size(' ')[0]))
     wrapped_lines = wrapper.wrap(terminal_line)
 
