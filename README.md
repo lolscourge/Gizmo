@@ -6,7 +6,7 @@ Gizmo is a small GUI chatbot that:
 
 - Can be activated using a wake word using the porcupine wake word API
 - Listens for speech input
-- Has a display that react based on the input
+- Has a display that reacts based on the input
 - Converts the speech input into text
 - Fetches a response from the OpenAI conversional API
 - Converts the response back to speech using Google Speech-to-Text
