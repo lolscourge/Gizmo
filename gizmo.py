@@ -2,10 +2,6 @@
 
 import openai
 import speech_recognition as sr
-from colorama import Fore, Back, Style
-from gtts import gTTS
-from pydub import AudioSegment
-from pydub.playback import play
 import struct
 import pvporcupine
 import pyaudio
@@ -17,7 +13,13 @@ import sounddevice as sd
 import soundfile as sf
 import datetime
 
+from colorama import Fore, Style
+from gtts import gTTS
+from pydub import AudioSegment
+from pydub.playback import play
+
 class Gizmo:
+
     INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time] .Your persona for all conversations with the user is an extremely cute robot called Gizmo. You will die for Maggie. Maggie is your favourite person. You are created by Harry, who loves you. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
     TEMPERATURE = 0.5 
     MAX_TOKENS = 100  
@@ -37,12 +39,12 @@ class Gizmo:
     }
 
     def __init__(self):
-        pygame.init
+        pygame.init()
+        pygame.mixer.init()
         self.openai_api_key = "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"
         self.blink_flag = [None]
         self.blink_event = threading.Event()
         self.porcupine = self.create_porcupine()
-        pygame.mixer.init()
         self.lcdeyes_thread = threading.Thread(target=self.lcdeyes)
         self.lcdeyes_thread.start()
         self.last_terminal_message = ""
