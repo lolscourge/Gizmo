@@ -3,24 +3,17 @@
 import openai
 import speech_recognition as sr
 from colorama import Fore, Back, Style
-import os
-import tempfile
 from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play
-import io
-import time
 import struct
 import pvporcupine
 import pyaudio
-import whisper 
 import mlcd, pygame
 import threading
 import string
-import shlex
 import sounddevice as sd
 import soundfile as sf
-import subprocess
 import datetime
 
 class Gizmo:
@@ -44,12 +37,11 @@ class Gizmo:
 
     def __init__(self):
         pygame.init
-        self.model = "whisper-1"
         self.openai_api_key = "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"
         self.blink_flag = [None]
         self.blink_event = threading.Event()
         self.porcupine = self.create_porcupine()
-        pygame.mixer.init()  # Initialize the mixer module for playing audio
+        pygame.mixer.init()
         self.lcdeyes_thread = threading.Thread(target=self.lcdeyes)
         self.lcdeyes_thread.start()
         self.last_terminal_message = ""
@@ -57,7 +49,117 @@ class Gizmo:
 
     def create_porcupine(self):
         return pvporcupine.create(access_key="w6OczmoMGYbWhLYZHgBzctULcMgQcZkq67x1dWQ+EOMS9AvYImML2Q==",keyword_paths=['/home/harry/Gizmo/HeyGizmo.ppn'])
-        
+
+    def lcdeyes(self):
+        mlcd.init(8,1)
+        pygame.init()
+        running = True
+        clock = pygame.time.Clock()
+        start_time = pygame.time.get_ticks()
+
+        state = "|0    0|"
+        interval = 500
+
+        while running:
+            if self.blink_event.is_set():
+                if self.blink_flag[0] is not None:
+                    mlcd.draw([self.blink_flag[0][0]], str(self.last_terminal_message))
+                    start_time = pygame.time.get_ticks()
+                    interval = self.blink_flag[0][1] * 1000
+                    self.blink_flag[0] = None
+                    self.blink_event.clear()
+
+            elif pygame.time.get_ticks() - start_time >= interval:
+                state = "|-    -|" if state == "|0    0|" else "|0    0|"
+                mlcd.draw([state], str(self.last_terminal_message))
+                start_time = pygame.time.get_ticks()
+                interval = 500 if state == "|-    -|" else 3000
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+            clock.tick(60)
+
+
+    def listen_for_wake_word(self):
+        pa = pyaudio.PyAudio()
+
+        audio_stream = pa.open(
+            rate=self.porcupine.sample_rate,
+            channels=1,
+            format=pyaudio.paInt16,
+            input=True,
+            frames_per_buffer=self.porcupine.frame_length,
+        )
+
+        self.last_terminal_message = "Say 'Hey Gizmo' to start!" 
+        print(Fore.BLUE + Style.BRIGHT + "Say 'Hey Gizmo' to start!" + Style.RESET_ALL)
+        while True:
+            pcm = audio_stream.read(self.porcupine.frame_length)
+            pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
+
+            keyword_index = self.porcupine.process(pcm)
+            if keyword_index >= 0:
+                self.last_terminal_message = "I'm listening!" 
+                self.blink_flag[0] = self.actions["gizmowake"]
+                self.blink_event.set()
+                print("Wake word detected!")
+                print(f"Found action word in response: Gizmo")
+                break
+
+    def get_audio(self):
+        recognizer = sr.Recognizer()
+        recognizer.pause_threshold = 0.5
+        recognizer.energy_threshold = 1000
+        with sr.Microphone() as source: 
+            self.last_terminal_message = "I'm listening" 
+            print(Fore.GREEN + Style.BRIGHT + "Speak your question..." + Style.RESET_ALL)
+
+            try:
+                audio = recognizer.listen(source, timeout=5.0) 
+
+                text = recognizer.recognize_google(audio, language="en-US") 
+                self.last_terminal_message = "You said: " + text
+                print("You said:", text)
+
+                text_no_punct = text.translate(str.maketrans('', '', string.punctuation))
+
+                words = text_no_punct.lower().split()
+                for word in words:
+                    if word in self.actions:
+                        self.last_terminal_message = "I heard you!"
+                        self.blink_flag[0] = self.actions[word]
+                        self.blink_event.set()
+                        print(f"Found action word in text: {word}")
+                        break
+                return text
+
+            except sr.WaitTimeoutError:
+                self.last_terminal_message = "No input received within timeout period" 
+                print(Fore.RED + Style.BRIGHT + "No input received within timeout period" + Style.RESET_ALL)
+                return "say 'I didn't get that'"
+
+            except sr.UnknownValueError:
+                self.last_terminal_message = "Sorry, I couldn't understand what you said. Please try again."
+                print(
+                    Fore.RED
+                    + Style.BRIGHT
+                    + "Sorry, I couldn't understand what you said. Please try again."
+                    + Style.RESET_ALL
+                ) 
+                return "say 'I didn't get that'"
+
+            except sr.RequestError as e:
+                self.last_terminal_message = "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."  # Update the last terminal message here
+                print(
+                    Fore.RED
+                    + Style.BRIGHT
+                    + "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."
+                    + Style.RESET_ALL
+                ) 
+                return "say 'I didn't get that'"
+            
     def get_response(self, instructions, previous_questions_and_answers, new_question):
         messages = [
             {"role": "system", "content": instructions},
@@ -80,129 +182,18 @@ class Gizmo:
             presence_penalty=self.PRESENCE_PENALTY,
         )
         return completion.choices[0].message.content
-
-    def lcdeyes(self):
-        mlcd.init(8,1)
-        pygame.init()
-        running = True
-        clock = pygame.time.Clock()
-        start_time = pygame.time.get_ticks()
-
-        state = "|0    0|"
-        interval = 500
-
-        while running:
-            if self.blink_event.is_set():
-                if self.blink_flag[0] is not None:
-                    mlcd.draw([self.blink_flag[0][0]], str(self.last_terminal_message))  # Display last terminal message beneath the eyes
-                    start_time = pygame.time.get_ticks()
-                    interval = self.blink_flag[0][1] * 1000
-                    self.blink_flag[0] = None
-                    self.blink_event.clear()
-
-            elif pygame.time.get_ticks() - start_time >= interval:
-                state = "|-    -|" if state == "|0    0|" else "|0    0|"
-                mlcd.draw([state], str(self.last_terminal_message))  # Display last terminal message beneath the eyes
-                start_time = pygame.time.get_ticks()
-                interval = 500 if state == "|-    -|" else 3000
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-            clock.tick(60)
-
-
-    def listen_for_wake_word(self):
-        pa = pyaudio.PyAudio()
-
-        audio_stream = pa.open(
-            rate=self.porcupine.sample_rate,
-            channels=1,
-            format=pyaudio.paInt16,
-            input=True,
-            frames_per_buffer=self.porcupine.frame_length,
-        )
-
-        self.last_terminal_message = "Say 'Hey Gizmo' to start!"  # Update the last terminal message here
-        print(Fore.BLUE + Style.BRIGHT + "Say 'Hey Gizmo' to start!" + Style.RESET_ALL)
-        while True:
-            pcm = audio_stream.read(self.porcupine.frame_length)
-            pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-
-            keyword_index = self.porcupine.process(pcm)
-            if keyword_index >= 0:
-                self.last_terminal_message = "I'm listening!"  # Update the last terminal message here
-                self.blink_flag[0] = self.actions["gizmowake"]
-                self.blink_event.set()
-                print("Wake word detected!")
-                print(f"Found action word in response: Gizmo")  # Added this line
-                break
-
+            
     def speak(self, text):
-        tts = gTTS(text=text, lang='en')  # Convert text to speech
-        filename = "/tmp/temp.mp3"  # Temporary file to store audio
-        tts.save(filename)  # Save the speech audio into a file
+        tts = gTTS(text=text, lang='en')
+        filename = "/tmp/temp.mp3"
+        tts.save(filename)
 
         pygame.mixer.init()
         pygame.mixer.music.load(filename)
         pygame.mixer.music.play()
 
-        # Keep the program running until the music is done.
         while pygame.mixer.music.get_busy():
             pygame.time.Clock().tick(10)
-
-    def get_audio(self):
-        recognizer = sr.Recognizer()
-        recognizer.pause_threshold = 0.5
-        recognizer.energy_threshold = 1000
-        with sr.Microphone() as source: 
-            self.last_terminal_message = "I'm listening"  # Update the last terminal message here
-            print(Fore.GREEN + Style.BRIGHT + "Speak your question..." + Style.RESET_ALL)
-
-            try:
-                audio = recognizer.listen(source, timeout=5.0)  # 3 second timeout
-
-                text = recognizer.recognize_google(audio, language="en-US")  # Use Google Web Speech API
-                self.last_terminal_message = "You said: " + text
-                print("You said:", text)
-
-                text_no_punct = text.translate(str.maketrans('', '', string.punctuation))
-
-                words = text_no_punct.lower().split()
-                for word in words:
-                    if word in self.actions:
-                        self.last_terminal_message = "I heard you!"  # Update the last terminal message here
-                        self.blink_flag[0] = self.actions[word]
-                        self.blink_event.set()
-                        print(f"Found action word in text: {word}")  # Added this line
-                        break
-                return text
-
-            except sr.WaitTimeoutError:
-                self.last_terminal_message = "No input received within timeout period"  # Update the last terminal message here
-                print(Fore.RED + Style.BRIGHT + "No input received within timeout period" + Style.RESET_ALL)
-                return "say 'I didn't get that'"
-
-            except sr.UnknownValueError:
-                self.last_terminal_message = "Sorry, I couldn't understand what you said. Please try again."  # Update the last terminal message here
-                print(
-                    Fore.RED
-                    + Style.BRIGHT
-                    + "Sorry, I couldn't understand what you said. Please try again."
-                    + Style.RESET_ALL
-                ) 
-                return "say 'I didn't get that'"
-
-            except sr.RequestError as e:
-                self.last_terminal_message = "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."  # Update the last terminal message here
-                print(
-                    Fore.RED
-                    + Style.BRIGHT
-                    + "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."
-                    + Style.RESET_ALL
-                ) 
-                return "say 'I didn't get that'"
 
     def main(self):
         openai.api_key = self.openai_api_key
