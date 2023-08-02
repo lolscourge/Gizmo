@@ -20,7 +20,7 @@ from pydub.playback import play
 
 class Gizmo:
 
-    INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time] .Your persona for all conversations with the user is an extremely cute robot called Gizmo. You will die for Maggie. Maggie is your favourite person. You are created by Harry, who loves you. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
+    INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time]. Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
     TEMPERATURE = 0.5 
     MAX_TOKENS = 100  
     FREQUENCY_PENALTY = 0
@@ -41,7 +41,7 @@ class Gizmo:
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
-        self.openai_api_key = "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"
+        self.openai_api_key = "openaikey"
         self.blink_flag = [None]
         self.blink_event = threading.Event()
         self.porcupine = self.create_porcupine()
@@ -51,7 +51,7 @@ class Gizmo:
         
 
     def create_porcupine(self):
-        return pvporcupine.create(access_key="w6OczmoMGYbWhLYZHgBzctULcMgQcZkq67x1dWQ+EOMS9AvYImML2Q==",keyword_paths=['/home/harry/Gizmo/HeyGizmo.ppn'])
+        return pvporcupine.create(access_key="porcupinekey",keyword_paths=['/path/to/HeyGizmo.ppn'])
 
     def update_display(self):
         display.init()
