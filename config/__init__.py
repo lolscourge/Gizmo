@@ -1,8 +1,8 @@
 # Configuration settings for the application
 
 CONFIG = {
-    "openai_api_key": "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",
-    "porcupine_access_key": "w6OczmoMGYbWhLYZHgBzctULcMgQcZkq67x1dWQ+EOMS9AvYImML2Q==",
-    "temp_audio_file_location": "C:/Users/harry/Documents/GitHub/Gizmo/temp/temp.mp3",
-    "porcupine_keyword_path": "C:/Users/harry/Documents/GitHub/Gizmo/HeyGizmo_Windows.ppn"
+    "openai_api_key": "xxx",
+    "porcupine_access_key": "xxx",
+    "temp_audio_file_location": "path/to/tempfilelocation/temp.mp3",
+    "porcupine_keyword_path": "path/to/Gizmo_VER.ppn"
 }
