@@ -48,6 +48,8 @@ def create_porcupine(self):
 
 The included .ppn file is the default Wake Word for Gizmo. It is the Linux version. You can generate any Wake Word with a Porcupine account for whatever specific operating system you are on.
 
+There are also default Wake Words you can use - refer to [Porcupine documentation](https://github.com/Picovoice/porcupine) for more details
+
 ```bash
     def create_porcupine(self):
         return pvporcupine.create(keyword_paths=['/path/to/HeyGizmo.ppn'])
@@ -56,3 +58,13 @@ The included .ppn file is the default Wake Word for Gizmo. It is the Linux versi
 
 You can ammend how Gizmo behaves by changing the instructions. If you want him to be able to tell the time, I'd leave the first instrcution "if you are asked a question about the time, respond with [current time] - it's clunky but it works.
 
+```bash
+class Gizmo:
+
+    INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time]. REST OF YOUR INSTRUCTIONS"
+    TEMPERATURE = 0.5 
+    MAX_TOKENS = 100  
+    FREQUENCY_PENALTY = 0
+    PRESENCE_PENALTY = 0.6
+    MAX_CONTEXT_QUESTIONS = 10
+```
