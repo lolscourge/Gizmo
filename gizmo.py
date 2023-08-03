@@ -21,8 +21,6 @@ from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play
 
-print(CONFIG["porcupine_keyword_path"])
-
 class Gizmo:
 
     INSTRUCTIONS = "Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
@@ -60,7 +58,6 @@ class Gizmo:
 
 #Display
 
-    #Update Display
     def update_display(self):
         display.init()
         running = True
@@ -252,12 +249,6 @@ class Gizmo:
         self.last_terminal_message = "Timer is up! Time's up!"
         print("Timer is up! Time's up!")
         self.speak("Time's up!")
-
-    def timer_alert(self):
-        """Alert method called when the timer is up."""
-        self.last_terminal_message = "Timer is up! Time's up!"
-        print("Timer is up! Time's up!")
-        self.speak("Time's up!  Time's up! Time's up!  Time's up!")
     
     #GetTime
     def get_current_time(self):
@@ -267,7 +258,6 @@ class Gizmo:
             str: The current time in the format "HH:MM".
         """
         current_time = datetime.datetime.now().strftime("%H:%M")
-        self.last_terminal_message = f"The current time is {current_time}."
         print(f"The current time is {current_time}.")
         return current_time
 
