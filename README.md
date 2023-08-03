@@ -19,20 +19,39 @@ It's my first python project and frankly, it was a reach. The code is probably a
 Before installing the Python dependencies, make sure to install the necessary system-level packages:
 
 ```bash
-sudo apt-get install -y portaudio19-dev
+sudo apt-get install -y portaudio19-dev```
+```
 
 ## Install Requirements
 
 Install the requirements.txt file in your environement.
 
+```bash
+pip install -r requirements.txt
+```
+
 ## Get API keys
 
 You'll need to generate API keys for OpenAI and Porcupine Wake Word. To do this, make an account with them and follow their instructions, then update them in the Gizmo.py file.
+
+```bash
+def __init__(self):
+...
+self.openai_api_key = 
+```
+```bash
+def create_porcupine(self):
+        return pvporcupine.create(access_key="")
+```
 
 ## Porcupine Wake Word
 
 The included .ppn file is the default Wake Word for Gizmo. It is the Linux version. You can generate any Wake Word with a Porcupine account for whatever specific operating system you are on.
 
+```bash
+    def create_porcupine(self):
+        return pvporcupine.create(keyword_paths=['/path/to/HeyGizmo.ppn'])
+```
 ## Instructions
 
 You can ammend how Gizmo behaves by changing the instructions. If you want him to be able to tell the time, I'd leave the first instrcution "if you are asked a question about the time, respond with [current time] - it's clunky but it works.
