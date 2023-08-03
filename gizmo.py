@@ -60,6 +60,7 @@ class Gizmo:
 
 #Display
 
+    #Update Display
     def update_display(self):
         display.init()
         running = True
@@ -256,7 +257,7 @@ class Gizmo:
         """Alert method called when the timer is up."""
         self.last_terminal_message = "Timer is up! Time's up!"
         print("Timer is up! Time's up!")
-        self.speak("Time's up!")
+        self.speak("Time's up!  Time's up! Time's up!  Time's up!")
     
     #GetTime
     def get_current_time(self):
