@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import openai
 import speech_recognition as sr
 import struct
@@ -12,15 +13,19 @@ import string
 import sounddevice as sd
 import soundfile as sf
 import datetime
+from config import CONFIG
+
 
 from colorama import Fore, Style
 from gtts import gTTS
 from pydub import AudioSegment
 from pydub.playback import play
 
+print(CONFIG["porcupine_keyword_path"])
+
 class Gizmo:
 
-    INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time]. Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
+    INSTRUCTIONS = "Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
     TEMPERATURE = 0.5 
     MAX_TOKENS = 100  
     FREQUENCY_PENALTY = 0
@@ -41,17 +46,19 @@ class Gizmo:
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
-        self.openai_api_key = "openaikey"
+        self.openai_api_key = CONFIG["openai_api_key"]
         self.blink_flag = [None]
         self.blink_event = threading.Event()
         self.porcupine = self.create_porcupine()
-        self.lcdeyes_thread = threading.Thread(target=self.lcdeyes)
-        self.lcdeyes_thread.start()
+        self.update_display_thread = threading.Thread(target=self.update_display)
+        self.update_display_thread.start()
         self.last_terminal_message = ""
         
 
     def create_porcupine(self):
-        return pvporcupine.create(access_key="porcupinekey",keyword_paths=['/path/to/HeyGizmo.ppn'])
+        return pvporcupine.create(access_key=CONFIG["porcupine_access_key"],keyword_paths=[CONFIG["porcupine_keyword_path"]])
+
+#Display
 
     def update_display(self):
         display.init()
@@ -83,7 +90,9 @@ class Gizmo:
 
             clock.tick(60)
 
+#Gizmo
 
+    #WakeWord
     def listen_for_wake_word(self):
         pa = pyaudio.PyAudio()
 
@@ -110,6 +119,7 @@ class Gizmo:
                 print(f"Found action word in response: Gizmo")
                 break
 
+    #Listening
     def get_audio(self):
         recognizer = sr.Recognizer()
         recognizer.pause_threshold = 0.5
@@ -135,6 +145,22 @@ class Gizmo:
                         self.blink_event.set()
                         print(f"Found action word in text: {word}")
                         break
+
+                if "set a timer for" in text.lower():
+                    # Extract the time duration from the user's command
+                    try:
+                        time_in_seconds = int(next((word for word in words if word.isdigit()), None))
+                        # Set the timer
+                        self.set_timer(time_in_seconds)
+                        return "Timer is set."
+                    except ValueError:
+                        return "Sorry, I couldn't understand the timer duration."
+                    
+                if "current time" in text.lower() or "what time is it" in text.lower():
+                    # Get the current time
+                    current_time = self.get_current_time()
+                    return current_time
+                
                 return text
 
             except sr.WaitTimeoutError:
@@ -161,7 +187,8 @@ class Gizmo:
                     + Style.RESET_ALL
                 ) 
                 return "say 'I didn't get that'"
-            
+
+    #Response     
     def get_response(self, instructions, previous_questions_and_answers, new_question):
         messages = [
             {"role": "system", "content": instructions},
@@ -184,10 +211,11 @@ class Gizmo:
             presence_penalty=self.PRESENCE_PENALTY,
         )
         return completion.choices[0].message.content
-            
+
+    #Speak        
     def speak(self, text):
         tts = gTTS(text=text, lang='en')
-        filename = "/tmp/temp.mp3"
+        filename = CONFIG["temp_audio_file_location"]
         tts.save(filename)
 
         pygame.mixer.init()
@@ -196,6 +224,53 @@ class Gizmo:
 
         while pygame.mixer.music.get_busy():
             pygame.time.Clock().tick(10)
+
+        pygame.mixer.music.stop()  # Stop the mixer
+        pygame.mixer.quit()
+
+        os.remove(CONFIG["temp_audio_file_location"])
+
+#Plugins
+
+    #Timer
+    def set_timer(self, time_in_seconds):
+            """Set a timer that alerts after the specified time.
+
+            Args:
+                time_in_seconds (int): The time duration for the timer in seconds.
+            """
+            self.last_terminal_message = f"Setting a timer for {time_in_seconds} seconds."
+            print(f"Setting a timer for {time_in_seconds} seconds.")
+
+            # Create a timer that will call the 'timer_alert' method after 'time_in_seconds'
+            timer = threading.Timer(time_in_seconds, self.timer_alert)
+            timer.start()
+
+    def timer_alert(self):
+        """Alert method called when the timer is up."""
+        self.last_terminal_message = "Timer is up! Time's up!"
+        print("Timer is up! Time's up!")
+        self.speak("Time's up!")
+
+    def timer_alert(self):
+        """Alert method called when the timer is up."""
+        self.last_terminal_message = "Timer is up! Time's up!"
+        print("Timer is up! Time's up!")
+        self.speak("Time's up!")
+    
+    #GetTime
+    def get_current_time(self):
+        """Get the current time.
+
+        Returns:
+            str: The current time in the format "HH:MM".
+        """
+        current_time = datetime.datetime.now().strftime("%H:%M")
+        self.last_terminal_message = f"The current time is {current_time}."
+        print(f"The current time is {current_time}.")
+        return current_time
+
+#Main
 
     def main(self):
         openai.api_key = self.openai_api_key
@@ -207,9 +282,6 @@ class Gizmo:
 
             if question is not None:
                 answer = self.get_response(self.INSTRUCTIONS, previous_questions_and_answers, question)
-                current_time_placeholder = "[current time]"
-                current_time = datetime.datetime.now().strftime("%H:%M")
-                answer = answer.replace(current_time_placeholder, current_time)
                 self.last_terminal_message = "Gizmo: " + answer
                 print("Gizmo: ", answer)
                 self.speak(answer)
