@@ -19,7 +19,7 @@ It's my first python project and frankly, it was a reach. The code is probably a
 Before installing the Python dependencies, make sure to install the necessary system-level packages:
 
 ```bash
-sudo apt-get install -y portaudio19-dev```
+sudo apt-get install -y portaudio19-dev
 ```
 
 ## Install Requirements
@@ -37,7 +37,7 @@ You'll need to generate API keys for OpenAI and Porcupine Wake Word. To do this,
 ```bash
 def __init__(self):
 ...
-self.openai_api_key = 
+        self.openai_api_key = 
 ```
 ```bash
 def create_porcupine(self):
@@ -51,7 +51,7 @@ The included .ppn file is the default Wake Word for Gizmo. It is the Linux versi
 There are also default Wake Words you can use - refer to [Porcupine documentation](https://github.com/Picovoice/porcupine) for more details
 
 ```bash
-    def create_porcupine(self):
+def create_porcupine(self):
         return pvporcupine.create(keyword_paths=['/path/to/HeyGizmo.ppn'])
 ```
 ## Instructions
