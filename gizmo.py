@@ -10,87 +10,94 @@ import display
 import pygame
 import threading
 import string
-import sounddevice as sd
-import soundfile as sf
 import datetime
 from config import CONFIG
 
 
 from colorama import Fore, Style
 from gtts import gTTS
-from pydub import AudioSegment
-from pydub.playback import play
 
 class Gizmo:
 
     INSTRUCTIONS = "Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
     TEMPERATURE = 0.5 
-    MAX_TOKENS = 100  
+    MAX_TOKENS = 400 
     FREQUENCY_PENALTY = 0
     PRESENCE_PENALTY = 0.6
     MAX_CONTEXT_QUESTIONS = 10
 
     actions = {
-        "test": ["<3    <3", 4],
-        "gizmowake": ["!!    !!", 4],
-        "i care about you": ["<3    <3", 4],
-        "maggie": ["<3    <3", 4],
-        "harry": ["<3    <3", 4],
-        "happy": [":)    :)", 4],
-        "smile": [":)    :)", 4],
-        "sad": [":(    :(", 4]
+        "test": "<3    <3",
+        "gizmowake": "!!    !!",
+        "i care about you": "<3    <3",
+        "maggie": "<3    <3",
+        "harry": "<3    <3",
+        "happy": ":)    :)",
+        "smile": ":)    :)",
+        "sad": ":(    :("
     }
-
+ 
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
+        display.init()
         self.openai_api_key = CONFIG["openai_api_key"]
-        self.blink_flag = [None]
-        self.blink_event = threading.Event()
         self.porcupine = self.create_porcupine()
-        self.update_display_thread = threading.Thread(target=self.update_display)
-        self.update_display_thread.start()
         self.last_terminal_message = ""
-        
+        self.eyes_flag = [None] # Used to signal an update to the eyes
+        self.terminal_line_flag = [None] # Used to signal an update to the terminal line
+
+        self.update_eyes_and_terminal_thread = threading.Thread(target=self.update_eyes_and_terminal)
+        self.update_eyes_and_terminal_thread.start()
+
+        self.eyes_flag[0] = ["|0    0|"]
+        # Thread to update the terminal line
+
+
+#Display
+
+    def update_eyes_and_terminal(self):
+        state = ["|0    0|"]  # Initialize with a list
+        terminal_line = ""
+        interval_open = 4000  # Time for open eyes
+        interval_closed = 500  # Time for closed eyes
+        start_time = pygame.time.get_ticks()
+        eyes_open = True
+
+        while True:
+            current_time = pygame.time.get_ticks()
+            
+            # Check if it's time to change the eye state
+            if eyes_open and current_time - start_time >= interval_open:
+                state[0] = "|-    -|"
+                eyes_open = False
+                start_time = current_time
+            elif not eyes_open and current_time - start_time >= interval_closed:
+                state[0] = "|0    0|"
+                eyes_open = True
+                start_time = current_time
+
+            if self.eyes_flag[0] is not None:
+                state = self.eyes_flag[0]  # Make sure this is a list
+                self.eyes_flag[0] = None
+                display.update_eyes(state)  # Update the eyes
+
+            if self.terminal_line_flag[0] is not None:
+                terminal_line = self.terminal_line_flag[0]
+                self.terminal_line_flag[0] = None
+                display.update_terminal_line(terminal_line)  # Update the terminal line
+
+            if state or terminal_line:
+                display.update_eyes(state)
+                display.update_terminal_line(terminal_line)
+                pygame.display.flip()
+#Gizmo
+
+    #WakeWord
 
     def create_porcupine(self):
         return pvporcupine.create(access_key=CONFIG["porcupine_access_key"],keyword_paths=[CONFIG["porcupine_keyword_path"]])
 
-#Display
-
-    def update_display(self):
-        display.init()
-        running = True
-        clock = pygame.time.Clock()
-        start_time = pygame.time.get_ticks()
-
-        state = "|0    0|"
-        interval = 500
-
-        while running:
-            if self.blink_event.is_set():
-                if self.blink_flag[0] is not None:
-                    display.draw([self.blink_flag[0][0]], str(self.last_terminal_message))
-                    start_time = pygame.time.get_ticks()
-                    interval = self.blink_flag[0][1] * 1000
-                    self.blink_flag[0] = None
-                    self.blink_event.clear()
-
-            elif pygame.time.get_ticks() - start_time >= interval:
-                state = "|-    -|" if state == "|0    0|" else "|0    0|"
-                display.draw([state], str(self.last_terminal_message))
-                start_time = pygame.time.get_ticks()
-                interval = 500 if state == "|-    -|" else 3000
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-            clock.tick(60)
-
-#Gizmo
-
-    #WakeWord
     def listen_for_wake_word(self):
         pa = pyaudio.PyAudio()
 
@@ -102,7 +109,7 @@ class Gizmo:
             frames_per_buffer=self.porcupine.frame_length,
         )
 
-        self.last_terminal_message = "Say 'Hey Gizmo' to start!" 
+        self.terminal_line_flag[0] = "Say 'Hey Gizmo' to start!" 
         print(Fore.BLUE + Style.BRIGHT + "Say 'Hey Gizmo' to start!" + Style.RESET_ALL)
         while True:
             pcm = audio_stream.read(self.porcupine.frame_length)
@@ -110,9 +117,8 @@ class Gizmo:
 
             keyword_index = self.porcupine.process(pcm)
             if keyword_index >= 0:
-                self.last_terminal_message = "I'm listening!" 
-                self.blink_flag[0] = self.actions["gizmowake"]
-                self.blink_event.set()
+                self.eyes_flag[0] = [self.actions["gizmowake"]]
+                self.terminal_line_flag[0] = "I'm listening" 
                 print("Wake word detected!")
                 print(f"Found action word in response: Gizmo")
                 break
@@ -123,14 +129,14 @@ class Gizmo:
         recognizer.pause_threshold = 0.5
         recognizer.energy_threshold = 1000
         with sr.Microphone() as source: 
-            self.last_terminal_message = "I'm listening" 
+            self.terminal_line_flag[0] = "I'm listening" 
             print(Fore.GREEN + Style.BRIGHT + "Speak your question..." + Style.RESET_ALL)
 
             try:
                 audio = recognizer.listen(source, timeout=5.0) 
 
                 text = recognizer.recognize_google(audio, language="en-US") 
-                self.last_terminal_message = "You said: " + text
+                self.terminal_line_flag[0] = "You said: " + text
                 print("You said:", text)
 
                 text_no_punct = text.translate(str.maketrans('', '', string.punctuation))
@@ -138,9 +144,8 @@ class Gizmo:
                 words = text_no_punct.lower().split()
                 for word in words:
                     if word in self.actions:
-                        self.last_terminal_message = "I heard you!"
-                        self.blink_flag[0] = self.actions[word]
-                        self.blink_event.set()
+                        self.terminal_line_flag[0] = "I heard you!"
+                        self.eyes_flag[0] = [self.actions[word]]
                         print(f"Found action word in text: {word}")
                         break
 
@@ -150,7 +155,7 @@ class Gizmo:
                         time_in_seconds = int(next((word for word in words if word.isdigit()), None))
                         # Set the timer
                         self.set_timer(time_in_seconds)
-                        return "Timer is set."
+                        return "say 'OK'"
                     except ValueError:
                         return "Sorry, I couldn't understand the timer duration."
                     
@@ -162,12 +167,12 @@ class Gizmo:
                 return text
 
             except sr.WaitTimeoutError:
-                self.last_terminal_message = "No input received within timeout period" 
+                self.terminal_line_flag[0] = "No input received within timeout period" 
                 print(Fore.RED + Style.BRIGHT + "No input received within timeout period" + Style.RESET_ALL)
                 return "say 'I didn't get that'"
 
             except sr.UnknownValueError:
-                self.last_terminal_message = "Sorry, I couldn't understand what you said. Please try again."
+                self.terminal_line_flag[0] = "Sorry, I couldn't understand what you said. Please try again."
                 print(
                     Fore.RED
                     + Style.BRIGHT
@@ -177,7 +182,7 @@ class Gizmo:
                 return "say 'I didn't get that'"
 
             except sr.RequestError as e:
-                self.last_terminal_message = "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."  # Update the last terminal message here
+                self.terminal_line_flag[0] = "Sorry, I'm currently unable to access the Google Web Speech API. Please try again later."  # Update the last terminal message here
                 print(
                     Fore.RED
                     + Style.BRIGHT
@@ -237,7 +242,7 @@ class Gizmo:
             Args:
                 time_in_seconds (int): The time duration for the timer in seconds.
             """
-            self.last_terminal_message = f"Setting a timer for {time_in_seconds} seconds."
+            self.terminal_line_flag[0] = f"Setting a timer for {time_in_seconds} seconds."
             print(f"Setting a timer for {time_in_seconds} seconds.")
 
             # Create a timer that will call the 'timer_alert' method after 'time_in_seconds'
@@ -246,9 +251,9 @@ class Gizmo:
 
     def timer_alert(self):
         """Alert method called when the timer is up."""
-        self.last_terminal_message = "Timer is up! Time's up!"
+        self.terminal_line_flag[0] = "Timer is up! Time's up!"
         print("Timer is up! Time's up!")
-        self.speak("Time's up!")
+        self.speak("Time's up!" "Time's up!" "Time's up!" "Time's up!")
     
     #GetTime
     def get_current_time(self):
@@ -272,8 +277,13 @@ class Gizmo:
             question = self.get_audio()
 
             if question is not None:
-                answer = self.get_response(self.INSTRUCTIONS, previous_questions_and_answers, question)
-                self.last_terminal_message = "Gizmo: " + answer
+
+                if question.startswith("say "):
+                    answer = question[4:]
+
+                else:
+                    answer = self.get_response(self.INSTRUCTIONS, previous_questions_and_answers, question)
+                self.terminal_line_flag[0] = "Gizmo: " + answer
                 print("Gizmo: ", answer)
                 self.speak(answer)
                 previous_questions_and_answers.append((question, answer))
