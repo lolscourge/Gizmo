@@ -32,16 +32,13 @@ pip install -r requirements.txt
 
 ## Get API keys
 
-You'll need to generate API keys for OpenAI and Porcupine Wake Word. To do this, make an account with them and follow their instructions, then update them in the Gizmo.py file.
+You'll need to generate API keys for OpenAI and Porcupine Wake Word. To do this, make an account with them and follow their instructions, then update them in the config/__init__.py file.
 
 ```bash
-def __init__(self):
-...
-        self.openai_api_key = 
-```
-```bash
-def create_porcupine(self):
-        return pvporcupine.create(access_key="")
+CONFIG = {
+    "openai_api_key": "xxx",
+    "porcupine_access_key": "xxx",
+}
 ```
 
 ## Porcupine Wake Word
@@ -51,19 +48,31 @@ The included .ppn file is the default Wake Word for Gizmo. It is the Linux versi
 There are also default Wake Words you can use - refer to [Porcupine documentation](https://github.com/Picovoice/porcupine) for more details
 
 ```bash
-def create_porcupine(self):
-        return pvporcupine.create(keyword_paths=['/path/to/HeyGizmo.ppn'])
+CONFIG = {
+    "porcupine_keyword_path": "path/to/HeyGizmo_VER.ppn"
+}
 ```
+
+## Text to Speech
+
+The text to speech requires a location to create an .mp3 file that is written to and sent off to Google. 
+
+```bash
+CONFIG = {
+    "temp_audio_file_location": "path/to/temp/temp.mp3",
+}
+```
+
 ## Instructions
 
-You can ammend how Gizmo behaves by changing the instructions. If you want him to be able to tell the time, I'd leave the first instrcution "if you are asked a question about the time, respond with [current time] - it's clunky but it works.
+Instructions can be amended to change Gizmo's behaviour.
 
 ```bash
 class Gizmo:
 
-    INSTRUCTIONS = "If you are asked a question about what time it is, you respond [current time]. REST OF YOUR INSTRUCTIONS"
+    INSTRUCTIONS = "Your persona for all conversations with the user is an extremely cute robot called Gizmo. Your responses are short and sweet. You are cute a bubbly and sweet, but extremely smart. You like to brag, and are funny."
     TEMPERATURE = 0.5 
-    MAX_TOKENS = 100  
+    MAX_TOKENS = 400 
     FREQUENCY_PENALTY = 0
     PRESENCE_PENALTY = 0.6
     MAX_CONTEXT_QUESTIONS = 10
